@@ -6,16 +6,15 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 
 
-DEFAULT_CATEGORY_RULES: Dict[str, List[str]] = {
-    "Food & Drinks": ["starbucks", "mc donald", "mcdonald", "burger", "pizza", "dominos", "swiggy", "zomato", "coffee", "restaurant", "cafe", "uber eats", "grubhub"],
-    "Transport": ["uber", "lyft", "taxi", "metro", "train", "fuel", "shell", "bp", "chevron", "petrol", "gas station"],
-    "Shopping": ["amazon", "walmart", "target", "ikea", "best buy", "shopping", "store"],
-    "Subscriptions": ["netflix", "spotify", "hulu", "prime video", "icloud", "google one", "dropbox", "zoom", "office 365"],
-    "Travel": ["airbnb", "hotel", "marriott", "hilton", "booking.com", "expedia", "airlines", "flight", "uber travel"],
-    "Utilities": ["electric", "water", "utility", "internet", "comcast", "verizon", "att", "vodafone"],
-    "Software": ["microsoft", "google", "aws", "gcp", "adobe", "figma", "github", "gitlab"],
-    "Health": ["pharmacy", "walgreens", "cvs", "doctor", "hospital", "dental", "pharma"],
-    "Housing": ["rent", "landlord", "mortgage"],
+DEFAULT_CATEGORY_RULES = {
+    "Electronics": ["mouse", "keyboard", "usb", "laptop", "charger", "cable", "electronics"],
+    "Food & Drinks": ["restaurant", "cafe", "coffee", "pizza", "burger", "zomato", "swiggy"],
+    "Transport": ["uber", "taxi", "metro", "fuel", "petrol"],
+    "Shopping": ["amazon", "flipkart", "store", "shopping"],
+    "Utilities": ["electric", "water", "internet", "bill"],
+    "Health": ["hospital", "pharmacy", "doctor"],
+    "Travel": ["hotel", "flight", "airbnb"],
+    "Subscriptions": ["netflix", "spotify"],
 }
 
 

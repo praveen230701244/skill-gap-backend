@@ -66,7 +66,11 @@ def create_app() -> Flask:
     @app.route("/health", methods=["GET"])
     def health():
         return jsonify({"status": "ok", "expenseCount": repo.count()})
-
+    @app.route("/reset", methods=["DELETE"])
+    def reset():
+        repo = current_app.extensions["repo"]
+        repo.clear_all()
+        return {"status": "cleared"}
     @app.errorhandler(404)
     def not_found(_e):
         return jsonify({"error": "Not found"}), 404

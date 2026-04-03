@@ -8,7 +8,7 @@ from flask import Blueprint, current_app, jsonify, request
 
 from services.ml_model import AutoCategorizer
 from services.pdf_parser import parse_pdf_bytes
-from services.storage import Expense, FileStorageAdapter
+from services.storage import Expense
 
 
 upload_bp = Blueprint("upload", __name__)
