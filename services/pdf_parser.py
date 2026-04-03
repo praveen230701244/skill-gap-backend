@@ -6,7 +6,10 @@ AMOUNT_PATTERN = re.compile(r"(\d+(?:,\d{3})*(?:\.\d{2})?)")
 
 
 def parse_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
-    import fitz
+    try:
+        import fitz
+    except Exception as e:
+        raise RuntimeError("PyMuPDF not installed. Run: pip install pymupdf") from e
 
     doc = fitz.open(stream=file_bytes, filetype="pdf")
 
@@ -20,8 +23,12 @@ def parse_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
     for line in lines:
         l = line.lower()
 
-        # ❌ Skip unwanted lines
-        if any(x in l for x in ["total", "subtotal", "tax", "invoice"]):
+        # ✅ smarter filtering
+        if "total" in l and len(l) < 25:
+            continue
+        if "tax" in l:
+            continue
+        if "invoice" in l:
             continue
 
         matches = AMOUNT_PATTERN.findall(line)
@@ -30,7 +37,8 @@ def parse_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
 
         try:
             amount = float(matches[-1].replace(",", ""))
-        except:
+        except Exception as e:
+            print("PARSE ERROR:", e)
             continue
 
         if amount <= 0 or amount > 50000:
@@ -43,7 +51,7 @@ def parse_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
             "category": None
         })
 
-    # Remove duplicates
+    # ✅ remove duplicates
     seen = set()
     final = []
     for e in expenses:
@@ -51,5 +59,8 @@ def parse_pdf_bytes(file_bytes: bytes) -> List[Dict[str, Any]]:
         if key not in seen:
             seen.add(key)
             final.append(e)
+
+    if not final:
+        print("⚠️ No items extracted from PDF")
 
     return final
