@@ -1,0 +1,11 @@
+Flask
+flask-cors
+openai
+pymupdf
+numpy
+python-dateutil
+scikit-learn
+statsmodels
+azure-storage-blob
+azure-ai-formrecognizer
+gunicorn
