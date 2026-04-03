@@ -123,7 +123,7 @@ def chat():
 
     insights = _compute_insights(expenses)
 
-    # Attempt Azure OpenAI if configured; otherwise fall back to heuristics.
+    # Attempt configured LLM service (Gemini) first; fallback to heuristics on failure.
     try:
         openai_service = current_app.extensions.get("openai_service")
         if openai_service:
@@ -137,18 +137,26 @@ def chat():
             risk = insights.get("riskScore")
             anomalies = insights.get("anomalies") or []
             suggestions = insights.get("savingsSuggestions") or []
+            prediction = insights.get("prediction") or {}
+            prediction_ci = prediction.get("confidenceInterval") or {}
 
             user_prompt = (
                 f"User question: {message}\n\n"
-                f"Expense Summary:\n"
-                f"Total expenses: {sum(float(e.get('amount') or 0.0) for e in expenses):.2f}\n\n"
-                f"Overspending categories:\n{overspending_str or '- None'}\n\n"
-                f"Monthly totals:\n{monthly_str or '- N/A'}\n\n"
-                f"Growth trends: {growth}\n"
-                f"Risk score: {risk}\n"
-                f"Anomaly count: {len(anomalies)}\n"
-                f"Savings suggestions: {suggestions}\n\n"
-                f"Provide the three requested sections."
+                f"Use the following structured financial insights and respond with actionable guidance.\n"
+                f"- Total expenses: {sum(float(e.get('amount') or 0.0) for e in expenses):.2f}\n"
+                f"- Overspending categories:\n{overspending_str or '- None'}\n"
+                f"- Monthly totals:\n{monthly_str or '- N/A'}\n"
+                f"- Growth trends: {growth}\n"
+                f"- Risk score: {risk}/100\n"
+                f"- Anomaly count: {len(anomalies)}\n"
+                f"- Savings suggestions: {suggestions}\n"
+                f"- Prediction: month={prediction.get('nextMonth')}, total={prediction.get('predictedTotal')}, "
+                f"interval=({prediction_ci.get('lower')} to {prediction_ci.get('upper')})\n\n"
+                f"Output format:\n"
+                f"1) Overspending categories\n"
+                f"2) Practical saving tips\n"
+                f"3) Budget suggestions\n"
+                f"Keep it simple, concise, and actionable."
             )
 
             advice = openai_service.generate_advice(SYSTEM_PROMPT, user_prompt)

@@ -1,6 +1,5 @@
 Flask
 flask-cors
-openai
 pymupdf
 numpy
 python-dateutil
@@ -9,3 +8,5 @@ statsmodels
 azure-storage-blob
 azure-ai-formrecognizer
 gunicorn
+requests
+dotenv

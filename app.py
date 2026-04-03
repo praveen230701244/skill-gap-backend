@@ -1,14 +1,17 @@
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+load_dotenv()
+
 from flask import Flask, jsonify
 from flask_cors import CORS
 
 from routes.analysis import analysis_bp
 from routes.chatbot import chatbot_bp
 from routes.upload import upload_bp
+from services.gemini_service import GeminiService
 from services.ml_model import AutoCategorizer
-from services.openai_service import AzureOpenAIService
 from services.storage import AzureBlobStorageAdapter, ExpenseRepository, LocalStorageAdapter
 
 
@@ -52,26 +55,8 @@ def create_app() -> Flask:
     app.extensions["categorizer"] = categorizer
     app.extensions["file_storage"] = file_storage
 
-    # Optional Azure OpenAI setup. If config is missing, the chatbot will fall back to heuristics.
-    openai_service = None
-    az_key = os.getenv("AZURE_OPENAI_API_KEY", "").strip()
-    az_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "").strip()
-    az_deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "").strip()
-    az_api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-02-15-preview").strip()
-    az_timeout = float(os.getenv("AZURE_OPENAI_TIMEOUT_SECONDS", "20"))
-
-    if az_key and az_endpoint and az_deployment:
-        try:
-            openai_service = AzureOpenAIService(
-                api_key=az_key,
-                endpoint=az_endpoint,
-                deployment=az_deployment,
-                api_version=az_api_version,
-                timeout_seconds=az_timeout,
-            )
-        except Exception:
-            openai_service = None
-    app.extensions["openai_service"] = openai_service
+    # Gemini setup. Keep extension key as "openai_service" for route compatibility.
+    app.extensions["openai_service"] = GeminiService()
 
     # Register endpoints.
     app.register_blueprint(upload_bp, url_prefix="/upload")
