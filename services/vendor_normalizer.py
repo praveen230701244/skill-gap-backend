@@ -44,6 +44,8 @@ _NOISE_TOKENS = {
     "online",
     "netbanking",
     "net",
+    "success",
+    "date",
 }
 
 _LEGAL_SUFFIXES = {

@@ -9,13 +9,13 @@ from services.vendor_normalizer import normalize_vendor
 
 DEFAULT_CATEGORY_RULES = {
     "Electronics": ["mouse", "keyboard", "usb", "laptop", "charger", "cable", "electronics"],
-    "Food & Drinks": ["restaurant", "cafe", "coffee", "pizza", "burger", "zomato", "swiggy"],
-    "Transport": ["uber", "taxi", "metro", "fuel", "petrol"],
-    "Shopping": ["amazon", "flipkart", "store", "shopping"],
-    "Utilities": ["electric", "water", "internet", "bill"],
-    "Health": ["hospital", "pharmacy", "doctor"],
-    "Travel": ["hotel", "flight", "airbnb"],
+    "Food": ["swiggy", "zomato", "restaurant", "cafe", "coffee", "pizza", "burger"],
+    "Shopping": ["amazon", "flipkart", "myntra", "store", "shopping"],
+    "Transport": ["uber", "ola", "taxi", "metro", "fuel", "petrol"],
+    "Utilities": ["electricity", "electric", "bill", "recharge", "water", "internet"],
     "Subscriptions": ["netflix", "spotify"],
+    "Health": ["pharmacy", "hospital", "doctor"],
+    "Travel": ["hotel", "flight", "airbnb"],
 }
 
 
@@ -48,11 +48,11 @@ class AutoCategorizer:
     def _rule_categorize(self, vendor: Optional[str]) -> str:
         v = _normalize_text(vendor)
         if not v:
-            return "Uncategorized"
+            return "Others"
         for cat, keywords in self.rules.items():
             if any(kw in v for kw in keywords):
                 return cat
-        return "Uncategorized"
+        return "Others"
 
     def _can_train(self, expenses: List[Dict[str, Any]]) -> bool:
         labeled = [
@@ -130,7 +130,9 @@ class AutoCategorizer:
 
         pred = self.predict_category(vendor=vendor)
         if pred and float(pred["confidence"]) >= self.confidence_threshold:
-            return str(pred["category"])
+            chosen = str(pred["category"]).strip()
+            if chosen and chosen.lower() != "uncategorized":
+                return chosen
 
         return self._rule_categorize(vendor=vendor)
 

@@ -11,7 +11,10 @@ except Exception:  # pragma: no cover
 def category_breakdown(expenses: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     by_cat: Dict[str, float] = defaultdict(float)
     for e in expenses:
-        by_cat[str(e.get("category") or "Uncategorized")] += float(e.get("amount") or 0.0)
+        cat = str(e.get("category") or "Others").strip()
+        if not cat or cat.lower() == "uncategorized":
+            cat = "Others"
+        by_cat[cat] += float(e.get("amount") or 0.0)
     rows = [{"category": k, "total": round(v, 2)} for k, v in by_cat.items()]
     rows.sort(key=lambda x: x["total"], reverse=True)
     return rows

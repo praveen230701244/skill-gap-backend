@@ -190,6 +190,9 @@ def upload_csv():
     if not raw_expenses:
         return jsonify({"error": "No valid data"}), 400
 
+    # Auto-clean: new file upload starts a fresh dataset
+    repo.clear_all()
+
     # ✅ REMOVE DUPLICATES (CORRECT)
     raw_expenses = _remove_duplicates(raw_expenses)
 
@@ -233,6 +236,9 @@ def upload_pdf():
     if not raw_expenses:
         return jsonify({"error": "No data extracted"}), 400
 
+    # Auto-clean: new file upload starts a fresh dataset
+    repo.clear_all()
+
     # ✅ REMOVE DUPLICATES
     raw_expenses = _remove_duplicates(raw_expenses)
 
@@ -256,23 +262,18 @@ def upload_pdf():
 @upload_bp.route("/manual", methods=["POST"])
 def upload_manual():
     repo = current_app.extensions["repo"]
-    data = request.get_json()
+    payload = request.get_json(silent=True) or {}
 
     try:
         raw = [{
-            "amount": _parse_amount(data["amount"]),
-            "date": _parse_date(data["date"]),
-            "category": data.get("category"),
-            "vendor": data.get("vendor"),
+            "amount": _parse_amount(payload.get("amount")),
+            "date": _parse_date(payload.get("date")),
+            "category": payload.get("category"),
+            "vendor": payload.get("vendor"),
         }]
     except Exception as e:
         return jsonify({"error": str(e)}), 400
 
     expenses = _categorize_and_build_expenses(raw, "manual")
-    inserted = repo.add_expenses(expenses)
-
-    print("📥 RAW:", raw_expenses)
-    print("📊 FINAL:", expenses)
-    print("💾 INSERTED:", inserted)
-
-    return jsonify({"status": "ok", "inserted": inserted})
+    repo.add_expenses(expenses)
+    return jsonify({"status": "ok"})

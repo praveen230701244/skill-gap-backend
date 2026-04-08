@@ -74,7 +74,15 @@ def create_app() -> Flask:
     def reset():
         repo = current_app.extensions["repo"]
         repo.clear_all()
-        return {"status": "cleared"}
+        # Reset in-memory ML state as well
+        categorizer = current_app.extensions.get("categorizer")
+        try:
+            if categorizer is not None:
+                categorizer._vectorizer = None
+                categorizer._classifier = None
+        except Exception:
+            pass
+        return jsonify({"status": "cleared"})
     @app.errorhandler(404)
     def not_found(_e):
         return jsonify({"error": "Not found"}), 404

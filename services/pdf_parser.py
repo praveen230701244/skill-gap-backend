@@ -162,16 +162,19 @@ def _extract_vendor(text: str) -> str:
     # UPI / wallet patterns (high confidence)
     m = _UPI_TO_RE.search(raw)
     if m:
-        return normalize_vendor(m.group("vendor"))
+        v = normalize_vendor(m.group("vendor"))
+        return v
 
     m = _PAID_TO_RE.search(raw)
     if m:
-        return normalize_vendor(m.group("vendor"))
+        v = normalize_vendor(m.group("vendor"))
+        return v
 
     # If we have a "to <vendor>" ending, it often indicates a payee.
     m = _TO_RE.search(raw)
     if m:
-        return normalize_vendor(m.group("vendor"))
+        v = normalize_vendor(m.group("vendor"))
+        return v
 
     # Statement-like rows: date | narration | debit | credit | balance
     cols = [c.strip() for c in _COL_SPLIT_RE.split(raw) if c.strip()]
@@ -187,12 +190,32 @@ def _extract_vendor(text: str) -> str:
         if non_amount_cols:
             # Pick the longest narration-ish column.
             non_amount_cols.sort(key=len, reverse=True)
-            return normalize_vendor(non_amount_cols[0])
+            v = normalize_vendor(non_amount_cols[0])
+            return v
 
     # Fallback: remove amount and date fragments and normalize what remains.
     stripped = _DATE_RE.sub(" ", raw)
     stripped = _AMOUNT_RE.sub(" ", stripped)
-    return normalize_vendor(stripped)
+    v = normalize_vendor(stripped)
+
+    # Never allow vendors that are clearly noise tokens
+    bad = {
+        "unknown",
+        "date",
+        "payment",
+        "upi",
+        "txn",
+        "txnid",
+        "ref",
+        "id",
+        "success",
+        "transfer",
+        "debit",
+        "credit",
+    }
+    if not v or v.strip().lower() in bad:
+        return "Unknown"
+    return v
 
 
 def _is_plausible_txn_line(line: str) -> bool:
@@ -257,6 +280,17 @@ def _extract_transactions(lines: Iterable[str]) -> List[_ParsedTxn]:
 
     for line in lines:
         s = (line or "").strip()
+        if not s:
+            continue
+
+        # GPay/PhonePe exports sometimes have status tokens like "Success" in their own column.
+        if s.lower() == "success":
+            continue
+        if re.search(r"\bsuccess\b", s, flags=re.IGNORECASE):
+            # Remove it so vendor extraction prefers the actual description.
+            s = re.sub(r"\bsuccess\b", " ", s, flags=re.IGNORECASE)
+            s = re.sub(r"\s+", " ", s).strip()
+
         if not _is_plausible_txn_line(s):
             # Still update last_seen_date from context lines.
             d = _safe_parse_date(s)
@@ -276,7 +310,7 @@ def _extract_transactions(lines: Iterable[str]) -> List[_ParsedTxn]:
             d = datetime.utcnow().strftime("%Y-%m-%d")
 
         vendor = _extract_vendor(s)
-        if not vendor:
+        if not vendor or str(vendor).strip().lower() in {"unknown", "success", "payment", "upi", "txn", "ref", "id"}:
             vendor = "Unknown"
 
         txns.append(_ParsedTxn(amount=float(amount), vendor=vendor, date=d))

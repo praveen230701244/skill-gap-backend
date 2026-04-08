@@ -17,21 +17,10 @@ chatbot_bp = Blueprint("chatbot", __name__)
 
 
 SYSTEM_PROMPT = (
-    "You are a senior AI financial advisor.\n"
-    "You help users understand spending patterns and make realistic, personalized changes.\n"
-    "\n"
-    "Behavioral rules:\n"
-    "- Be specific with numbers (percentages, monthly impact) and name merchants when helpful.\n"
-    "- Prefer small, high-leverage actions (e.g., reduce Swiggy by 2 orders/week) with estimated savings.\n"
-    "- If the user asks a direct question, answer it first, then add advice.\n"
-    "- If data is insufficient, say what’s missing and give a safe next step.\n"
-    "- Avoid moralizing; be supportive and practical.\n"
-    "\n"
-    "Reasoning (do not reveal):\n"
-    "1) Identify relevant signals from the provided insights\n"
-    "2) Quantify the pattern (share, trend, change)\n"
-    "3) Recommend 2-4 concrete actions with estimated savings\n"
-    "4) Provide a short follow-up question for personalization"
+    "You are a personal finance advisor.\n"
+    "Respond short (3–4 lines), conversational, and personalized.\n"
+    "Include ₹ amounts + % shares, and give 1 actionable tip.\n"
+    "No generic fluff."
 )
 
 def _compute_insights(expenses: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -129,6 +118,14 @@ def chat():
     if not message:
         return jsonify({"error": "Missing `message` in request body."}), 400
 
+    msg_low = message.lower().strip()
+    if msg_low in {"hi", "hello", "hey", "hii", "hola"}:
+        return jsonify(
+            {
+                "advice": "Hi! I’m your finance advisor.\nAsk: “Where am I overspending?”\nOr: “How can I save ₹1000/month?”"
+            }
+        )
+
     if not expenses:
         advice = "No expenses found yet. Upload a CSV/PDF or add a manual entry to get personalized advice."
         return jsonify({"advice": advice})
@@ -179,12 +176,14 @@ def chat():
             )
 
             advice = openai_service.generate_advice(SYSTEM_PROMPT, user_prompt)
-            if advice:
-                return jsonify({"advice": advice})
+            if advice and str(advice).strip():
+                return jsonify({"advice": str(advice).strip()})
     except Exception:
         # Keep fallback for reliability.
         pass
 
-    advice = _format_fallback_advice(message, insights)
+    advice = _format_fallback_advice(message, insights).strip()
+    if not advice:
+        advice = "I’m having trouble analyzing right now—try again in a moment."
     return jsonify({"advice": advice})
 
