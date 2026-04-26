@@ -1,89 +1,47 @@
-name: Build and deploy to AKS
+name: Security Scanning (SAST + DAST)
 
 on:
   push:
     branches: [main]
 
-env:
-  IMAGE_NAME: expense-backend
-
 jobs:
+
+  # 🔐 CodeQL - Static Analysis
   codeql-sast:
     name: CodeQL (Python SAST)
     runs-on: ubuntu-latest
-    continue-on-error: true
+
     permissions:
       actions: read
       contents: read
       security-events: write
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: python
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@v4
 
-      - name: Analyze
-        uses: github/codeql-action/analyze@v3
-
-
-  build-push-deploy:
-    runs-on: ubuntu-latest
-    needs: codeql-sast
-    permissions:
-      contents: read
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Docker login to ACR
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ secrets.ACR_LOGIN_SERVER }}
-          username: ${{ secrets.ACR_USERNAME }}
-          password: ${{ secrets.ACR_PASSWORD }}
-
-      - name: Build and push image
-        run: |
-          IMAGE="${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}"
-          docker build -t "$IMAGE" -f backend/Dockerfile backend
-          docker push "$IMAGE"
-          echo "IMAGE=$IMAGE" >> $GITHUB_ENV
-
-      - name: Set AKS kubectl context
-        uses: azure/aks-set-context@v3
-        with:
-          resource-group: ${{ secrets.AKS_RESOURCE_GROUP }}
-          cluster-name: ${{ secrets.AKS_CLUSTER_NAME }}
-
-      - name: Deploy manifests
-        run: |
-          sed "s|<REPLACE_WITH_MY_ACR_IMAGE>|${IMAGE}|g" k8s/deployment.yaml | kubectl apply -f -
-          kubectl apply -f k8s/service.yaml
-          kubectl rollout status deployment/expense-backend --timeout=300s
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v4
 
 
+  # 🌐 OWASP ZAP - Dynamic Scan
   zap-dast:
     name: OWASP ZAP Baseline (DAST)
     runs-on: ubuntu-latest
     continue-on-error: true
+    needs: codeql-sast
     timeout-minutes: 10
-    needs: build-push-deploy
 
     steps:
-      - name: OWASP ZAP Baseline Scan
+      - name: Run OWASP ZAP Scan
         uses: zaproxy/action-baseline@v0.12.0
         with:
           target: http://40.80.72.10/health
